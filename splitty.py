@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-
 import click
 from git import Repo
 import inquirer
@@ -19,8 +18,23 @@ def select_branch(repo, prompt, sort=None):
     return answer['branch']
 
 def get_changed_files(repo, base_branch, big_branch):
-    diff = repo.git.diff(f'{base_branch}..{big_branch}', name_only=True)
-    return diff.splitlines()
+    # Get diff with status letters (e.g., A for added, M for modified)
+    diff_output = repo.git.diff("--name-status", f'{base_branch}..{big_branch}')
+    files = []
+    for line in diff_output.splitlines():
+        parts = line.split(maxsplit=1)
+        if len(parts) < 2:
+            continue
+        status, filename = parts
+        # Map git status to our (N) or (M) tags
+        if status == "A":
+            marker = "(N)"
+        elif status == "M":
+            marker = "(M)"
+        else:
+            marker = f"({status})"  # For any other statuses, just show the raw letter
+        files.append((filename, marker))
+    return files
 
 @click.command()
 @click.option('--repo-path', default=os.getcwd(), help='Path to the Git repository')
@@ -61,14 +75,17 @@ def main(repo_path):
         repo.git.checkout('-b', new_sub_base_branch)
         click.echo(f'✅ Created and checked out new branch: {new_sub_base_branch}')
 
-        # Get changed files
-        changed_files = get_changed_files(repo, base_branch, big_branch)
+        # Get changed files with status markers
+        changed_files_info = get_changed_files(repo, base_branch, big_branch)
+
+        # Build choices for inquirer: show file and marker; value is the file path
+        file_choices = [(f"{filename} {marker}", filename) for filename, marker in changed_files_info]
 
         # Prompt user to select files to copy using inquirer
         file_question = [
             inquirer.Checkbox('selected_files',
                              message=f'Select files to copy to {new_sub_base_branch}. (Press SPACE to select, ENTER to submit)',
-                             choices=changed_files)
+                             choices=file_choices)
         ]
         selected_files = inquirer.prompt(file_question)['selected_files']
 
@@ -93,12 +110,13 @@ def main(repo_path):
         click.echo(f'✅ Created and checked out new branch: {new_sub_feature_branch}')
 
         # Copy remaining files to new_sub_feature_branch
-        remaining_files = set(changed_files) - set(selected_files)
+        all_files = {filename for filename, _ in changed_files_info}
+        remaining_files = all_files - set(selected_files)
         for file in remaining_files:
             repo.git.checkout(big_branch, '--', file)
 
         # Stage and commit remaining files
-        repo.index.add(remaining_files)
+        repo.index.add(list(remaining_files))
         commit_message = f'copied rest of files from {big_branch}'
         repo.index.commit(commit_message)
         click.echo(f'✅ Committed remaining files to new sub-feature branch: {commit_message}')
@@ -110,7 +128,7 @@ def main(repo_path):
         click.echo(f'    - {new_sub_feature_branch} (NEW)')
 
         # Ask the user if they want to push the branches
-        push_choice_text ='Push both branches to origin/<name>'
+        push_choice_text = 'Push both branches to origin/<name>'
         push_question = [
             inquirer.List('push_choice',
                           message='Would you like to push the new branches to the remote?',
