@@ -1,0 +1,25 @@
+{
+  "lang": "en-EN",
+  "name": "Git Barber",
+  "short_name": "Git Barber",
+  "description": "Git Barber is a tool that helps you trim and style your git branches.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#000",
+  "background_color": "#000",
+  "icons": [
+    {
+      "src": "/favicon/favicon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon/favicon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
