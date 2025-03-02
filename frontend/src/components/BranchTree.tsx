@@ -1,4 +1,5 @@
-import { IoClose, IoGitBranchOutline } from 'react-icons/io5';
+import { motion } from 'motion/react';
+import { IoClose } from 'react-icons/io5';
 import { LuGitMerge } from 'react-icons/lu';
 
 import { Button } from './ui/button';
@@ -18,13 +19,13 @@ export default function BranchTree({ value, onChange, placeholders }: Props) {
   return (
     <div className='flex min-w-[500px] flex-col gap-2'>
       {value.map((branchName, depth) => (
-        <div
+        <motion.div
           key={depth}
-          style={{
-            // TODO: fade and smoothly translate each item
-            transform: `translateX(${depth * 12}px)`
-          }}
-          className='flex flex-row items-center gap-1 transition-transform'
+          initial={{ opacity: 0, x: depth * -12 }}
+          animate={{ opacity: 1, x: depth * 12 }}
+          // todo: no delay when adding, only delay on 1st render
+          transition={{ duration: 0.3, ease: 'easeOut', delay: depth <= 2 ? depth * 0.2 : 0 }}
+          className='flex flex-row items-center gap-1'
         >
           <LuGitMerge />
 
@@ -51,7 +52,7 @@ export default function BranchTree({ value, onChange, placeholders }: Props) {
               onClick={() => onChange(value.slice(0, value.length - 1))}
             />
           )}
-        </div>
+        </motion.div>
       ))}
 
       <Button className='font-bold' onClick={addNewItem} variant='ghost'>

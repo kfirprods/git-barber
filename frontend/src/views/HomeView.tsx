@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 
 import { TooltipArrow, TooltipContent, TooltipTrigger } from '@radix-ui/react-tooltip';
+import { TbListTree } from 'react-icons/tb';
 
 import BranchesList from '@/components/BranchesList';
 import BranchTree from '@/components/BranchTree';
@@ -24,7 +25,7 @@ const preferBaseSort = (b1: string, b2: string) => {
     return 1;
   }
 
-  return b1.localeCompare(b2);
+  return 0;
 };
 
 export default function HomeView() {
@@ -83,7 +84,12 @@ export default function HomeView() {
 
   if (baseBranch && messyBranch) {
     // TODO: based on the diff size, recommend # of branches to split to
-    stepTitle = `Let's set up the new tree 🌲`;
+    stepTitle = (
+      <div className='flex flex-row items-center justify-center gap-2'>
+        <TbListTree />
+        Let's figure out the new branches
+      </div>
+    );
     stepContent = (
       <div>
         <p className='my-3'>So instead of just "{messyBranch}", you'll end up with:</p>
