@@ -58,7 +58,7 @@ function BranchesList({ repoPath, onSelect, customFilter, customSort }: Branches
     .sort((b1, b2) => (customSort ? customSort(b1, b2) : b1.localeCompare(b2)));
 
   return (
-    <div className='flex w-[40vw] min-w-[400px] max-w-[600px] flex-col'>
+    <div className='flex w-[40vw] min-w-[400px] max-w-[600px] flex-col px-4'>
       <input
         type='text'
         placeholder='Filter branches...'
@@ -68,7 +68,7 @@ function BranchesList({ repoPath, onSelect, customFilter, customSort }: Branches
       />
       {loading && <p>Loading branches...</p>}
       {error && <p className='text-red-500'>Error: {error}</p>}
-      <ul className='flex-grow-1 space-y-4 overflow-y-auto'>
+      <ul className='flex-grow-1 space-y-4 overflow-y-auto pr-4'>
         {filteredBranches.map((branch) => (
           <li key={branch}>
             <a
@@ -76,7 +76,7 @@ function BranchesList({ repoPath, onSelect, customFilter, customSort }: Branches
               className='flex flex-row items-center gap-1 text-blue-500'
               onClick={() => onSelect(branch)}
             >
-              <IoGitBranchOutline />
+              <IoGitBranchOutline className='shrink-0' />
               {branch}
             </a>
           </li>

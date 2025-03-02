@@ -1,23 +1,16 @@
-import { IoClose } from 'react-icons/io5';
+import { IoClose, IoGitBranchOutline } from 'react-icons/io5';
 import { LuGitMerge } from 'react-icons/lu';
 
-import Button from './button';
+import { Button } from './ui/button';
 import { Input } from './ui/input';
 
 interface Props {
   value: string[];
   onChange: (newStructure: string[]) => void;
+  placeholders?: string[];
 }
 
-function getPlaceholder(depth: number, base: string) {
-  if (depth === 1) {
-    return `e.g. ${base}-backend`;
-  } else if (depth === 2) {
-    return `e.g. ${base}-frontend`;
-  }
-}
-
-export default function BranchTree({ value, onChange }: Props) {
+export default function BranchTree({ value, onChange, placeholders }: Props) {
   const addNewItem = () => {
     onChange([...value, '']);
   };
@@ -28,9 +21,10 @@ export default function BranchTree({ value, onChange }: Props) {
         <div
           key={depth}
           style={{
+            // TODO: fade and smoothly translate each item
             transform: `translateX(${depth * 12}px)`
           }}
-          className='flex flex-row items-center gap-1'
+          className='flex flex-row items-center gap-1 transition-transform'
         >
           <LuGitMerge />
 
@@ -38,7 +32,13 @@ export default function BranchTree({ value, onChange }: Props) {
             disabled={depth === 0}
             autoFocus={depth === 1}
             className='max-w-[80%]'
-            placeholder={getPlaceholder(depth, value[0])}
+            placeholder={
+              (placeholders &&
+                depth > 0 &&
+                depth <= placeholders.length &&
+                placeholders[depth - 1]) ||
+              undefined
+            }
             value={branchName}
             onChange={(e) => {
               onChange(value.map((v, i) => (i === depth ? e.target.value : v)));
@@ -54,7 +54,13 @@ export default function BranchTree({ value, onChange }: Props) {
         </div>
       ))}
 
-      <Button text='Add' onClick={addNewItem} />
+      <Button className='font-bold' onClick={addNewItem} variant='ghost'>
+        <div className='flex flex-row items-center font-bold'>
+          +
+          <LuGitMerge />
+        </div>{' '}
+        Add sub-branch
+      </Button>
     </div>
   );
 }

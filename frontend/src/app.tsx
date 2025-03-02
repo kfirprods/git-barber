@@ -5,7 +5,7 @@ import HomeView from './views/HomeView';
 
 function App() {
   return (
-    <ThemeProvider forcedTheme='dark'>
+    <ThemeProvider forcedTheme='light'>
       <HomeView />
     </ThemeProvider>
   );

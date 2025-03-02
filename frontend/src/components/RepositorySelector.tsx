@@ -41,7 +41,7 @@ const RepositorySelector: React.FC<RepositorySelectorProps> = ({ onSelect }) => 
 
   return (
     <div className='max-w-[50vw]'>
-      <ul>
+      <ul className='flex flex-col justify-start'>
         {repositories.map((repo) => (
           <li key={repo.path}>
             <a href='#' className='text-blue-500' onClick={() => handleSelect(repo.path)}>
@@ -52,7 +52,7 @@ const RepositorySelector: React.FC<RepositorySelectorProps> = ({ onSelect }) => 
 
         {repositories.length > 0 && <hr className='my-2 text-blue-500'></hr>}
 
-        <li>
+        <li className='justify-self-center text-center'>
           <a
             href='#'
             className='text-blue-500'
