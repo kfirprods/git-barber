@@ -1,0 +1,10 @@
+# ignore all venv related stuf
+venv
+site-packages
+lib
+include
+git_barber.egg-info
+dist
+build
+bin
+__pycache__
