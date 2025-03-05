@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 
 import { TooltipArrow, TooltipContent, TooltipTrigger } from '@radix-ui/react-tooltip';
 import { TbListTree } from 'react-icons/tb';
@@ -34,6 +34,33 @@ export default function HomeView() {
   const [baseBranch, setBaseBranch] = useState<string | null>(null);
   const [newBranchesStructure, setNewBranchesStructure] = useState<string[]>([]);
   const [currentSubBranchIndex, setCurrentSubBranchIndex] = useState(0);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const repo = params.get('repo');
+    const messy = params.get('messy');
+    const base = params.get('base');
+    const tree = params.get('tree');
+    if (repo) setRepoPath(repo);
+    if (messy) setMessyBranch(messy);
+    if (base) {
+      setBaseBranch(base);
+      if (tree) {
+        setNewBranchesStructure(tree.split(','));
+      } else {
+        setNewBranchesStructure([base, '', '']);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (repoPath) params.set('repo', repoPath);
+    if (messyBranch) params.set('messy', messyBranch);
+    if (baseBranch) params.set('base', baseBranch);
+    if (newBranchesStructure.length > 0) params.set('tree', newBranchesStructure.join(','));
+    window.history.replaceState(null, '', '?' + params.toString());
+  }, [repoPath, messyBranch, baseBranch, newBranchesStructure]);
 
   let stepTitle: ReactNode = 'Which repo shall we work with today?';
   let stepContent = <RepositorySelector onSelect={setRepoPath} />;
