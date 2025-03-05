@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 
 import CodeViewer from 'react-syntax-highlighter';
-import { a11yLight } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import { githubGist } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
 import DiffViewTopBar from '@/components/DiffViewTopBar';
+import { Button } from '@/components/ui/button';
 import { getDetailedDiff, GitDiffData } from '@/services/local-git-api.service';
 
 interface DiffLine {
@@ -25,8 +26,7 @@ export default function DiffView({
     Array<{
       file: string;
       status: string;
-      code: string;
-      lineTypes: string[];
+      hunks: Array<{ code: string; lineTypes: string[] }>;
     }>
   >([]);
 
@@ -39,12 +39,13 @@ export default function DiffView({
   useEffect(() => {
     if (diffData && diffData.changed_files) {
       const files = diffData.changed_files.map((file) => {
-        let lines: DiffLine[] = [];
+        let hunks: { code: string; lineTypes: string[] }[] = [];
         if (file.changed_hunks) {
           file.changed_hunks.forEach((hunk) => {
+            let lines: DiffLine[] = [];
             // Add hunk header line
             lines.push({ text: hunk.hunk_header, line_type: 'header' });
-            // Add each line from the hunk, prefixing with '+' for added, '-' for deleted, ' ' for context
+            // Add each line from the hunk with appropriate prefix
             if (hunk.lines) {
               hunk.lines.forEach((line) => {
                 const prefix =
@@ -52,11 +53,12 @@ export default function DiffView({
                 lines.push({ text: prefix + line.text, line_type: line.line_type });
               });
             }
+            const code = lines.map((l) => l.text).join('\n');
+            const lineTypes = lines.map((l) => l.line_type);
+            hunks.push({ code, lineTypes });
           });
         }
-        const code = lines.map((l) => l.text).join('\n');
-        const lineTypes = lines.map((l) => l.line_type);
-        return { file: file.file, status: file.status, code, lineTypes };
+        return { file: file.file, status: file.status, hunks };
       });
       setFileDiffs(files);
     }
@@ -75,35 +77,49 @@ export default function DiffView({
       />
 
       {fileDiffs.map((fileDiff, index) => (
-        <div key={index} className='mb-[30px] rounded-md border border-gray-300 bg-zinc-100/50'>
-          <div className='flex border-b border-b-gray-300 p-3'>
+        <div key={index} className='mb-[30px] rounded-md border border-gray-300'>
+          <div className='flex border-b border-b-gray-300 bg-zinc-100/50 p-3'>
             <h3 style={{ fontFamily: 'monospace' }}>
               {fileDiff.file} ({fileDiff.status})
             </h3>
           </div>
-          <CodeViewer
-            language='javascript'
-            style={a11yLight}
-            className='!p-0'
-            showLineNumbers
-            wrapLines
-            lineProps={(lineNumber: number) => {
-              const lineType = fileDiff.lineTypes[lineNumber - 1];
-              let background = 'transparent';
-              let className = '';
-              if (lineType === 'added') {
-                background = 'lightgreen';
-              } else if (lineType === 'deleted') {
-                background = '#ffcccc';
-              } else if (lineType === 'header') {
-                background = '#eaeaea';
-                className = 'header-code-line';
-              }
-              return { className, style: { background, cursor: 'default', padding: '2px 10px' } };
-            }}
-          >
-            {fileDiff.code}
-          </CodeViewer>
+          {fileDiff.hunks.map((hunk, hunkIndex) => (
+            <div key={hunkIndex} className='relative mb-2'>
+              <Button className='absolute right-2 top-2 rounded bg-slate-600 p-2 text-xs font-semibold hover:bg-slate-700'>
+                Stage Hunk
+              </Button>
+              <CodeViewer
+                language='javascript'
+                style={githubGist}
+                className='!p-0'
+                wrapLines
+                showLineNumbers
+                lineNumberStyle={{ display: 'none' }}
+                lineProps={(lineNumber: number) => {
+                  const lineType = hunk.lineTypes[lineNumber - 1];
+                  let background = 'transparent';
+                  let className = '';
+                  if (lineType === 'added') {
+                    background = '#DAFBE1';
+                  } else if (lineType === 'deleted') {
+                    background = '#FFEBE9';
+                  } else if (lineType === 'header') {
+                    background = '#eaeaea';
+                    className = 'header-code-line';
+                  }
+                  return {
+                    className,
+                    style: { background, cursor: 'default', padding: '2px 10px' }
+                  };
+                }}
+              >
+                {hunk.code}
+              </CodeViewer>
+              {hunkIndex < fileDiff.hunks.length - 1 && (
+                <div className='my-2 h-[2px] bg-gray-300'></div>
+              )}
+            </div>
+          ))}
         </div>
       ))}
     </div>
