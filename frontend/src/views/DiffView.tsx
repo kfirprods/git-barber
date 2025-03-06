@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import clsx from 'clsx';
 import CodeViewer from 'react-syntax-highlighter';
 import { githubGist } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
@@ -15,11 +16,13 @@ interface DiffLine {
 export default function DiffView({
   repoPath,
   baseBranch,
-  mergedBranch
+  mergedBranch,
+  className
 }: {
   repoPath: string;
   baseBranch: string;
   mergedBranch: string;
+  className?: string;
 }) {
   const [diffData, setDiffData] = useState<GitDiffData | null>(null);
   const [fileDiffs, setFileDiffs] = useState<
@@ -68,8 +71,12 @@ export default function DiffView({
     return <div>Loading diff...</div>;
   }
 
+  // TODO: left hand of the screen should show likes a "branches status"
+  // TODO: support collapsing file
+  // TODO: support staging entire file
+  // TODO: support line selection and staging
   return (
-    <div className='flex w-full flex-col overflow-y-auto'>
+    <div className={clsx('flex w-full flex-col overflow-y-auto', className)}>
       <DiffViewTopBar
         numberOfFiles={diffData.changed_files.length}
         linesAdded={diffData.lines_added}

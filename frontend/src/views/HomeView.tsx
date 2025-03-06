@@ -143,7 +143,19 @@ export default function HomeView() {
   if (repoPath && baseBranch && messyBranch && currentSubBranchIndex > 0) {
     stepTitle = `Choose what goes into ${newBranchesStructure[currentSubBranchIndex]}`;
     stepContent = (
-      <DiffView repoPath={repoPath} baseBranch={baseBranch} mergedBranch={messyBranch} />
+      <div className='flex w-full gap-6'>
+        <div className='w-[15vw] truncate text-left' style={{ direction: 'rtl' }}>
+          <div className='truncate'>{baseBranch}</div>
+          <div className='truncate'>{newBranchesStructure[currentSubBranchIndex]}</div>
+        </div>
+
+        <DiffView
+          repoPath={repoPath}
+          baseBranch={baseBranch}
+          mergedBranch={messyBranch}
+          className='flex-1 pr-4'
+        />
+      </div>
     );
   }
 
