@@ -50,7 +50,12 @@ function buildBranchChoices(tree, branch, depth = 0, choices = []) {
 
 async function syncBranches(branchTree, branch) {
   await git.checkout(branch);
-  await git.pull("origin", branch);
+  try {
+    await git.pull("origin", branch);
+  } catch (err) {
+    console.log(chalk.yellow(`[WARNING] Failed to pull branch from remote origin/${branch}: ${err}`));
+  }
+
   if (branchTree[branch]) {
     for (const child of branchTree[branch]) {
       await git.checkout(child);
