@@ -1,25 +1,31 @@
 #!/usr/bin/env node
 
-import { Command } from 'commander';
-import inquirer from 'inquirer';
-import chalk from 'chalk';
-import fs from 'fs-extra';
-import os from 'os';
-import path from 'path';
-import simpleGit from 'simple-git';
+import { Command } from "commander";
+import inquirer from "inquirer";
+import chalk from "chalk";
+import fs from "fs-extra";
+import os from "os";
+import path from "path";
+import simpleGit from "simple-git";
 
 const git = simpleGit();
 
 const CONFIG_DIR = path.join(
   os.homedir(),
-  process.platform === 'win32' ? 'AppData/Roaming/git-barber' : '.config/git-barber'
+  process.platform === "win32"
+    ? "AppData/Roaming/git-barber"
+    : ".config/git-barber"
 );
-const CONFIG_PATH = path.join(CONFIG_DIR, 'config.json');
+const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
 
 async function ensureConfig() {
   if (!(await fs.pathExists(CONFIG_PATH))) {
     await fs.ensureDir(CONFIG_DIR);
-    await fs.writeJson(CONFIG_PATH, { baseBranches: {}, branchTree: {}, ancestors: {} });
+    await fs.writeJson(CONFIG_PATH, {
+      baseBranches: {},
+      branchTree: {},
+      ancestors: {},
+    });
   }
 }
 
@@ -33,16 +39,18 @@ async function saveConfig(config) {
 }
 
 function buildBranchChoices(tree, branch, depth = 0, choices = []) {
-  choices.push({ name: `${'  '.repeat(depth)}${branch}`, value: branch });
+  choices.push({ name: `${"  ".repeat(depth)}${branch}`, value: branch });
   if (tree[branch]) {
-    tree[branch].forEach((child) => buildBranchChoices(tree, child, depth + 1, choices));
+    tree[branch].forEach((child) =>
+      buildBranchChoices(tree, child, depth + 1, choices)
+    );
   }
   return choices;
 }
 
 async function syncBranches(branchTree, branch) {
   await git.checkout(branch);
-  await git.pull('origin', branch);
+  await git.pull("origin", branch);
   if (branchTree[branch]) {
     for (const child of branchTree[branch]) {
       await git.checkout(child);
@@ -55,7 +63,7 @@ async function syncBranches(branchTree, branch) {
 
 function printTree(tree, baseBranches, currentBranch, deletedBranches = []) {
   function printBranch(branch, depth) {
-    const indent = '  '.repeat(depth);
+    const indent = "  ".repeat(depth);
     let branchName = branch;
     if (deletedBranches.includes(branch)) {
       branchName = chalk.strikethrough(chalk.red(branch));
@@ -77,37 +85,45 @@ function printTree(tree, baseBranches, currentBranch, deletedBranches = []) {
 const program = new Command();
 
 program
-  .name('git-barber')
-  .description(chalk.blueBright('CLI tool to neatly manage base branches'))
-  .version('1.0.0');
+  .name("git-barber")
+  .description(chalk.blueBright("CLI tool to neatly manage base branches"))
+  .version("1.0.0");
 
 program
-  .command('declare <branch>')
-  .description('Declare a new base branch (creates if not exists)')
+  .command("declare <branch>")
+  .description("Declare a new base branch (creates if not exists)")
   .action(async (branch) => {
     const config = await getConfig();
 
     if (!config.baseBranches[branch]) {
       const currentBranch = (await git.branch()).current;
 
-      const { ancestor } = await inquirer.prompt([{
-        type: 'input',
-        name: 'ancestor',
-        message: `Enter ancestor branch for ${branch}:`,
-        default: currentBranch,
-      }]);
+      const { ancestor } = await inquirer.prompt([
+        {
+          type: "input",
+          name: "ancestor",
+          message: `Enter ancestor branch for ${branch}:`,
+          default: currentBranch,
+        },
+      ]);
 
       config.baseBranches[branch] = true;
       config.branchTree[branch] = [];
       config.ancestors[branch] = ancestor;
       await saveConfig(config);
 
-      console.log(chalk.green(`Declared base branch: ${branch} with ancestor: ${ancestor}`));
+      console.log(
+        chalk.green(
+          `Declared base branch: ${branch} with ancestor: ${ancestor}`
+        )
+      );
 
       const branches = await git.branchLocal();
       if (!branches.all.includes(branch)) {
         await git.checkoutBranch(branch, ancestor);
-        console.log(chalk.green(`Created new branch: ${branch} from ${ancestor}`));
+        console.log(
+          chalk.green(`Created new branch: ${branch} from ${ancestor}`)
+        );
       }
     } else {
       console.log(chalk.yellow(`Branch already declared as base: ${branch}`));
@@ -115,14 +131,14 @@ program
   });
 
 program
-  .command('branch')
-  .description('Interactively create a nested branch from base branches')
+  .command("branch")
+  .description("Interactively create a nested branch from base branches")
   .action(async () => {
     const config = await getConfig();
 
     const baseBranchNames = Object.keys(config.baseBranches);
     if (!baseBranchNames.length) {
-      console.log(chalk.red('No base branches declared yet.'));
+      console.log(chalk.red("No base branches declared yet."));
       return;
     }
 
@@ -144,109 +160,132 @@ program
 
     const answers = await inquirer.prompt([
       {
-        type: 'list',
-        name: 'parentBranch',
-        message: 'Select ancestor branch:',
+        type: "list",
+        name: "parentBranch",
+        message: "Select ancestor branch:",
         choices: treeChoices,
         default: treeChoices[treeChoices.length - 1].value,
       },
       {
-        type: 'input',
-        name: 'newBranch',
-        message: 'Enter new branch name:',
+        type: "input",
+        name: "newBranch",
+        message: "Enter new branch name:",
       },
     ]);
 
     await git.checkout(answers.parentBranch);
     await git.checkoutBranch(answers.newBranch, answers.parentBranch);
 
-    if (!config.branchTree[answers.parentBranch]) config.branchTree[answers.parentBranch] = [];
+    if (!config.branchTree[answers.parentBranch])
+      config.branchTree[answers.parentBranch] = [];
     config.branchTree[answers.parentBranch].push(answers.newBranch);
     await saveConfig(config);
 
-    console.log(chalk.green(`Created nested branch ${answers.newBranch} from ${answers.parentBranch}`));
+    console.log(
+      chalk.green(
+        `Created nested branch ${answers.newBranch} from ${answers.parentBranch}`
+      )
+    );
   });
 
 program
-  .command('sync')
-  .description('Sync branches starting from ancestor or base branch')
+  .command("sync")
+  .description("Sync branches starting from ancestor or base branch")
   .action(async () => {
     const config = await getConfig();
 
     const choices = [];
     for (const base in config.baseBranches) {
-      choices.push({ name: `Ancestor (${config.ancestors[base]}) of ${base}`, value: config.ancestors[base] });
+      choices.push({
+        name: `${config.ancestors[base]} (ancestor of ${base})`,
+        value: config.ancestors[base],
+      });
       buildBranchChoices(config.branchTree, base, 1, choices);
     }
 
-    const { startBranch } = await inquirer.prompt([{
-      type: 'list',
-      name: 'startBranch',
-      message: 'Select branch to start sync from:',
-      choices,
-    }]);
+    const { startBranch } = await inquirer.prompt([
+      {
+        type: "list",
+        name: "startBranch",
+        message: "Select branch to start sync from:",
+        choices,
+      },
+    ]);
 
-    await syncBranches(config.branchTree, startBranch);
-    console.log(chalk.green('Sync complete!'));
-  });
-
-program
-  .command('reset-config')
-  .description('Reset git-barber configuration')
-  .action(async () => {
-    const { confirm } = await inquirer.prompt([{ 
-      type: 'input', 
-      name: 'confirm', 
-      message: 'Are you sure you want to delete your git-barber config? y/N', 
-      default: 'N'
-    }]);
-
-    if (confirm.toLowerCase() === 'y') {
-      await fs.remove(CONFIG_PATH);
-      console.log(chalk.green('git-barber configuration has been reset.'));
-    } else {
-      console.log(chalk.yellow('Reset operation cancelled.'));
+    try {
+      await syncBranches(config.branchTree, startBranch);
+      console.log(chalk.green("Sync complete!"));
+    } catch (err) {
+      console.log(chalk.red(`GitError: ${err.message}`));
+      process.exit(1);
     }
   });
 
 program
-  .command('status')
-  .description('Show current branch tree with current branch highlighted')
+  .command("reset-config")
+  .description("Reset git-barber configuration")
+  .action(async () => {
+    const { confirm } = await inquirer.prompt([
+      {
+        type: "input",
+        name: "confirm",
+        message: "Are you sure you want to delete your git-barber config? y/N",
+        default: "N",
+      },
+    ]);
+
+    if (confirm.toLowerCase() === "y") {
+      await fs.remove(CONFIG_PATH);
+      console.log(chalk.green("git-barber configuration has been reset."));
+    } else {
+      console.log(chalk.yellow("Reset operation cancelled."));
+    }
+  });
+
+program
+  .command("status")
+  .description("Show current branch tree with current branch highlighted")
   .action(async () => {
     const config = await getConfig();
     const current = (await git.branch()).current;
-    console.log(chalk.blueBright('Current Branch Tree:'));
+    console.log(chalk.blueBright("Current Branch Tree:"));
     printTree(config.branchTree, config.baseBranches, current);
   });
 
 program
-  .command('delete')
-  .description('Delete a branch and its descendants locally')
+  .command("delete")
+  .description("Delete a branch and its descendants locally")
   .action(async () => {
     const config = await getConfig();
 
     // Build choices from each base branch using buildBranchChoices
     let choices = [];
     for (const base of Object.keys(config.baseBranches)) {
-      choices = choices.concat(buildBranchChoices(config.branchTree, base, 0, []));
+      choices = choices.concat(
+        buildBranchChoices(config.branchTree, base, 0, [])
+      );
     }
 
-    const { branchToDelete } = await inquirer.prompt([{
-      type: 'list',
-      name: 'branchToDelete',
-      message: 'Select branch to delete:',
-      choices: choices
-    }]);
+    const { branchToDelete } = await inquirer.prompt([
+      {
+        type: "list",
+        name: "branchToDelete",
+        message: "Select branch to delete:",
+        choices: choices,
+      },
+    ]);
 
-    const { confirmDelete } = await inquirer.prompt([{
-      type: 'input',
-      name: 'confirmDelete',
-      message: `Are you sure you want to remove (locally) branch '${branchToDelete}' and all of its descendants? y/N`,
-      default: 'N'
-    }]);
+    const { confirmDelete } = await inquirer.prompt([
+      {
+        type: "input",
+        name: "confirmDelete",
+        message: `Are you sure you want to remove (locally) branch '${branchToDelete}' and all of its descendants? y/N`,
+        default: "N",
+      },
+    ]);
 
-    if (confirmDelete.toLowerCase() !== 'y') {
-      console.log(chalk.yellow('Deletion cancelled.'));
+    if (confirmDelete.toLowerCase() !== "y") {
+      console.log(chalk.yellow("Deletion cancelled."));
       return;
     }
 
@@ -267,7 +306,11 @@ program
     const branchesToDelete = collectBranches(branchToDelete);
 
     if (branchesToDelete.includes(current)) {
-      console.log(chalk.red('Cannot delete the branch you are currently on. Please checkout a different branch and try again.'));
+      console.log(
+        chalk.red(
+          "Cannot delete the branch you are currently on. Please checkout a different branch and try again."
+        )
+      );
       return;
     }
 
@@ -296,7 +339,7 @@ program
     console.log(chalk.blueBright('Updated Branch Tree:'));
     printTree(config.branchTree, config.baseBranches, current, deletedBranches);
 
-    console.log(chalk.green('Deleted branches: ' + deletedBranches.join(', ')));
+    console.log(chalk.green("Deleted branches: " + deletedBranches.join(", ")));
   });
 
 program
