@@ -126,12 +126,19 @@ program
       return;
     }
 
-    const { selectedBase } = await inquirer.prompt([{
-      type: 'list',
-      name: 'selectedBase',
-      message: 'Select base branch:',
-      choices: baseBranchNames,
-    }]);
+    let selectedBase;
+    if (baseBranchNames.length === 1) {
+      selectedBase = baseBranchNames[0];
+      console.log(chalk.green(`Only one base branch found: ${selectedBase}. Automatically selecting it.`));
+    } else {
+      const answer = await inquirer.prompt([{ 
+        type: 'list',
+        name: 'selectedBase',
+        message: 'Select base branch:',
+        choices: baseBranchNames,
+      }]);
+      selectedBase = answer.selectedBase;
+    }
 
     const treeChoices = buildBranchChoices(config.branchTree, selectedBase);
 
@@ -275,10 +282,65 @@ program
       }
     }
 
+    // Update configuration to reflect deleted branches
+    for (const branch of branchesToDelete) {
+      delete config.baseBranches[branch];
+      delete config.ancestors[branch];
+      delete config.branchTree[branch];
+    }
+    for (const parent in config.branchTree) {
+      config.branchTree[parent] = config.branchTree[parent].filter(child => !branchesToDelete.includes(child));
+    }
+    await saveConfig(config);
+
     console.log(chalk.blueBright('Updated Branch Tree:'));
     printTree(config.branchTree, config.baseBranches, current, deletedBranches);
 
     console.log(chalk.green('Deleted branches: ' + deletedBranches.join(', ')));
+  });
+
+program
+  .command('checkout')
+  .description('Checkout a branch from the branch tree')
+  .action(async () => {
+    const config = await getConfig();
+
+    const baseBranchNames = Object.keys(config.baseBranches);
+    if (!baseBranchNames.length) {
+      console.log(chalk.red('No base branches declared yet.'));
+      return;
+    }
+
+    let selectedBase;
+    if (baseBranchNames.length === 1) {
+      selectedBase = baseBranchNames[0];
+      console.log(chalk.green(`Only one base branch found: ${selectedBase}. Automatically selecting it.`));
+    } else {
+      const answer = await inquirer.prompt([{ 
+        type: 'list',
+        name: 'selectedBase',
+        message: 'Select base branch:',
+        choices: baseBranchNames,
+      }]);
+      selectedBase = answer.selectedBase;
+    }
+
+    const treeChoices = buildBranchChoices(config.branchTree, selectedBase);
+
+    const { branchToCheckout } = await inquirer.prompt([{ 
+      type: 'list',
+      name: 'branchToCheckout',
+      message: 'Select branch to checkout:',
+      choices: treeChoices,
+      default: treeChoices[treeChoices.length - 1].value,
+    }]);
+
+    try {
+      await git.checkout(branchToCheckout);
+      console.log(chalk.green(`Checked out branch ${branchToCheckout}`));
+    } catch (err) {
+      console.log(chalk.red(`Failed to checkout branch ${branchToCheckout}: ${err}`));
+    }
   });
 
 program.parse();
