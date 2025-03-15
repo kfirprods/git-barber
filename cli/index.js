@@ -54,7 +54,7 @@ async function syncBranches(branchTree, branch) {
   if (branchTree[branch]) {
     for (const child of branchTree[branch]) {
       await git.checkout(child);
-      await git.merge([branch]);
+      await git.merge(["--no-ff", "-m", `Merged ${branch} into ${child}`, branch]);
       console.log(chalk.green(`Merged ${branch} into ${child}`));
       await syncBranches(branchTree, child);
     }
@@ -213,7 +213,24 @@ program
     ]);
 
     try {
-      await syncBranches(config.branchTree, startBranch);
+      if (config.branchTree.hasOwnProperty(startBranch)) {
+        await syncBranches(config.branchTree, startBranch);
+      } else {
+        let selectedBase = null;
+        for (const base in config.baseBranches) {
+          if (config.ancestors[base] === startBranch) {
+            selectedBase = base;
+            break;
+          }
+        }
+        if (!selectedBase) {
+          throw new Error(`No base branch found corresponding to ancestor ${startBranch}`);
+        }
+        await git.checkout(selectedBase);
+        await git.merge(["--no-ff", "-m", `Merged ${startBranch} into ${selectedBase}`, startBranch]);
+        console.log(chalk.green(`Merged ${startBranch} into ${selectedBase}`));
+        await syncBranches(config.branchTree, selectedBase);
+      }
       console.log(chalk.green("Sync complete!"));
     } catch (err) {
       console.log(chalk.red(`GitError: ${err.message}`));
