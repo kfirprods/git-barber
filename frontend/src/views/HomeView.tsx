@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 
 import { TooltipArrow, TooltipContent, TooltipTrigger } from '@radix-ui/react-tooltip';
+import { FiChevronLeft } from 'react-icons/fi';
 import { TbListTree } from 'react-icons/tb';
 
 import BranchesList from '@/components/BranchesList';
@@ -35,7 +36,12 @@ export default function HomeView() {
   const [newBranchesStructure, setNewBranchesStructure] = useState<string[]>([]);
   const [currentSubBranchIndex, setCurrentSubBranchIndex] = useState(0);
 
-  useEffect(() => {
+  function applyUrlQueryParams() {
+    setRepoPath(null);
+    setMessyBranch(null);
+    setBaseBranch(null);
+    setNewBranchesStructure([]);
+
     const params = new URLSearchParams(window.location.search);
     const repo = params.get('repo');
     const messy = params.get('messy');
@@ -51,6 +57,10 @@ export default function HomeView() {
         setNewBranchesStructure([base, '', '']);
       }
     }
+  }
+
+  useEffect(() => {
+    applyUrlQueryParams();
   }, []);
 
   useEffect(() => {
@@ -59,11 +69,19 @@ export default function HomeView() {
     if (messyBranch) params.set('messy', messyBranch);
     if (baseBranch) params.set('base', baseBranch);
     if (newBranchesStructure.length > 0) params.set('tree', newBranchesStructure.join(','));
-    window.history.replaceState(null, '', '?' + params.toString());
+    window.history.pushState(null, '', '?' + params.toString());
   }, [repoPath, messyBranch, baseBranch, newBranchesStructure]);
 
   let stepTitle: ReactNode = 'Which repo shall we work with today?';
   let stepContent = <RepositorySelector onSelect={setRepoPath} />;
+
+  function getPreviousStepName() {
+    if (currentSubBranchIndex > 0) return null;
+    if (baseBranch) return 'base branch';
+    if (messyBranch) return 'messy branch';
+    if (repoPath) return 'repository';
+    return null;
+  }
 
   if (repoPath) {
     stepTitle = `Choose a messy branch to split up ✂️`;
@@ -162,9 +180,42 @@ export default function HomeView() {
   // TODO: use carousel to switch betweep steps + progress bar
   return (
     <div className='flex h-full w-full flex-col'>
-      <header className='self-stretch p-4 text-center shadow'>
+      <header className='relative p-4 text-center shadow'>
+        {getPreviousStepName() && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className='absolute left-4 top-1/2 -translate-y-1/2'
+                  onClick={async () => {
+                    if (getPreviousStepName() === 'repository') {
+                      setRepoPath(null);
+                      setMessyBranch(null);
+                      setBaseBranch(null);
+                      setNewBranchesStructure([]);
+                    } else if (getPreviousStepName() === 'messy branch') {
+                      setMessyBranch(null);
+                      setBaseBranch(null);
+                      setNewBranchesStructure([]);
+                    } else if (getPreviousStepName() === 'base branch') {
+                      setBaseBranch(null);
+                      setNewBranchesStructure([]);
+                    }
+                  }}
+                >
+                  <FiChevronLeft size={24} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className='text-xs'>
+                <TooltipArrow />
+                {`Go back to ${getPreviousStepName()}`}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
         <h1 className='text-2xl font-bold'>{stepTitle}</h1>
       </header>
+
       <main className='flex w-full flex-1 justify-center overflow-y-hidden p-4'>
         <div className='flex w-full justify-center'>{stepContent}</div>
       </main>
