@@ -73,7 +73,7 @@ function printTree(tree, baseBranches, currentBranch, deletedBranches = []) {
     if (deletedBranches.includes(branch)) {
       branchName = chalk.strikethrough(chalk.red(branch));
     } else if (branch === currentBranch) {
-      branchName = chalk.bgBlue(branch);
+      branchName = chalk.bgBlue(branch) + "\t" + chalk.white("👈 you're here");
     }
     console.log(indent + branchName);
     if (tree[branch]) {
@@ -191,6 +191,23 @@ program
         `Created nested branch ${answers.newBranch} from ${answers.parentBranch}`
       )
     );
+
+    const { pushBranch } = await inquirer.prompt([
+      {
+        type: "input",
+        name: "pushBranch",
+        message: `Would you like to push ${answers.newBranch} to origin? (y/N):`,
+        default: "N"
+      }
+    ]);
+    if (pushBranch.toLowerCase() === "y") {
+      try {
+        await git.push("origin", answers.newBranch);
+        console.log(chalk.green(`Pushed branch ${answers.newBranch} to origin`));
+      } catch (err) {
+        console.log(chalk.red(`Failed to push branch ${answers.newBranch}: ${err}`));
+      }
+    }
   });
 
 program
@@ -391,13 +408,13 @@ program
     }
 
     const treeChoices = buildBranchChoices(config.branchTree, selectedBase);
-
+    const currentBranch = (await git.branch()).current;
     const { branchToCheckout } = await inquirer.prompt([{ 
       type: 'list',
       name: 'branchToCheckout',
       message: 'Select branch to checkout:',
       choices: treeChoices,
-      default: treeChoices[treeChoices.length - 1].value,
+      default: currentBranch,
     }]);
 
     try {
