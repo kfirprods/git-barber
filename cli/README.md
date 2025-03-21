@@ -66,6 +66,17 @@ git-barber sync
 
 Choose your starting branch interactively from an indented tree.
 
+### Delete Branches
+
+Remove selected branch(es) locally. This command presents a multi-select prompt where you can choose the branch(es) to delete.
+Only the branch(es) you select will be removed, and the configuration will be updated accordingly.
+
+Usage:
+
+```bash
+git-barber delete
+```
+
 ---
 
 ## Example Workflow
