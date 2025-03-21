@@ -19,7 +19,7 @@ npm install -g git-barber
 Creates or declares a base branch with a chosen ancestor (defaulting to your current branch):
 
 ```bash
-git-barber declare <branch>
+git-barber declare-base <branch>
 ```
 
 **Example:**
@@ -30,13 +30,24 @@ git-barber declare feature/payment
 
 ### Create Nested Branches
 
-Interactively creates nested branches based on an existing branch hierarchy:
+Interactively creates nested branches based on an existing branch hierarchy. When run without arguments, the CLI will prompt you to select a parent branch and enter a new branch name interactively. Alternatively, you can provide an optional branch name as a positional argument:
 
 ```bash
-git-barber branch
+git-barber branch [branchName]
 ```
 
-You'll see a visual tree-like structure:
+- If the given branch name already exists locally, it will be registered as a child of the selected parent branch.
+- If it does not exist, the CLI will automatically create the new branch using the chosen parent as its base.
+
+For example:
+
+// Interactively create a new nested branch
+git-barber branch
+
+// Create or register branch 'feature/profile-update'
+git-barber branch feature/profile-update
+
+After invoking the command, you'll see a visual tree-like structure for choosing the parent branch:
 
 ```
 baseBranch
@@ -44,8 +55,6 @@ baseBranch
   └── anotherChild
       └── grandChild
 ```
-
-Choose the ancestor branch and provide a name for your new branch.
 
 ### Sync Branches
 
