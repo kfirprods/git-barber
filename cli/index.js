@@ -165,6 +165,15 @@ program
   .command("branch [branchName]")
   .description("Interactively create a nested branch from base branches")
   .action(async (providedBranch) => {
+    const status = await git.status();
+    if (status.files.length > 0) {
+      console.log(
+        chalk.red(
+          "⛔️ You have unstaged changes. Please commit or stash your changes before proceeding."
+        )
+      );
+      process.exit(1);
+    }
     const config = await getConfig();
 
     const baseBranchNames = Object.keys(config.baseBranches);
@@ -272,6 +281,15 @@ program
   .command("sync")
   .description("Sync branches starting from ancestor or base branch")
   .action(async () => {
+    const status = await git.status();
+    if (status.files.length > 0) {
+      console.log(
+        chalk.red(
+          "You have unstaged changes. Please commit or stash your changes before proceeding."
+        )
+      );
+      process.exit(1);
+    }
     const config = await getConfig();
 
     const choices = [];
@@ -362,7 +380,7 @@ program
       if (err.message.includes("CONFLICTS")) {
         console.log(
           chalk.white(
-            "🗯️ TIP: Solve the conflicts in your IDE, then re-run the sync"
+            "💈 TIP: Solve the conflicts in your IDE, then re-run the sync"
           )
         );
       }
@@ -456,45 +474,92 @@ program
       return;
     }
 
-    const deletedBranches = [];
+    // Delete selected branches locally
     for (const branch of branchesToDelete) {
       try {
         await git.deleteLocalBranch(branch, true);
-        deletedBranches.push(branch);
-        console.log(chalk.green(`Deleted branch ${branch}`));
+        console.log(chalk.green(`✅ Deleted branch ${branch}`));
       } catch (err) {
         console.log(chalk.red(`Failed to delete branch ${branch}: ${err}`));
       }
     }
 
-    // Update configuration to reflect deleted branches
-    for (const branch of branchesToDelete) {
-      delete config.baseBranches[branch];
-      delete config.ancestors[branch];
-      delete config.branchTree[branch];
+    // Build parent mapping from the branch tree
+    const parentMapping = {};
+    Object.keys(config.branchTree).forEach((parent) => {
+      config.branchTree[parent].forEach((child) => {
+        parentMapping[child] = parent;
+      });
+    });
+
+    // Reassign children of deleted branches to the nearest non-deleted ancestor
+    for (const deletedBranch of branchesToDelete) {
+      const children = config.branchTree[deletedBranch] || [];
+      let parent = parentMapping[deletedBranch];
+      while (parent && branchesToDelete.includes(parent)) {
+        parent = parentMapping[parent];
+      }
+      if (parent) {
+        config.branchTree[parent] = config.branchTree[parent] || [];
+        children.forEach((child) => {
+          if (!config.branchTree[parent].includes(child)) {
+            config.branchTree[parent].push(child);
+          }
+          parentMapping[child] = parent;
+        });
+      } else {
+        // No valid parent found (deleted branch was a base branch); children become new base branches
+        children.forEach((child) => {
+          config.baseBranches[child] = true;
+          if (config.ancestors[deletedBranch]) {
+            config.ancestors[child] = config.ancestors[deletedBranch];
+          }
+        });
+      }
     }
-    for (const parent in config.branchTree) {
+
+    // Remove deleted branches from any parent's children arrays
+    Object.keys(config.branchTree).forEach((parent) => {
       config.branchTree[parent] = config.branchTree[parent].filter(
         (child) => !branchesToDelete.includes(child)
       );
-    }
+    });
+
+    // Finally, delete config entries for the deleted branches
+    branchesToDelete.forEach((branch) => {
+      delete config.baseBranches[branch];
+      delete config.ancestors[branch];
+      delete config.branchTree[branch];
+    });
+
     await saveConfig(config);
 
     console.log(chalk.blueBright("Updated Branch Tree:"));
-    printTree(config.branchTree, config.baseBranches, current, deletedBranches);
+    printTree(config.branchTree, config.baseBranches, current);
 
-    console.log(chalk.green("Deleted branches: " + deletedBranches.join(", ")));
+    console.log(
+      chalk.green("Deleted branches: " + branchesToDelete.join(", "))
+    );
   });
 
 program
   .command("checkout")
   .description("Checkout a branch from the branch tree")
   .action(async () => {
+    const status = await git.status();
+    if (status.files.length > 0) {
+      console.log(
+        chalk.red(
+          "⛔️ You have unstaged changes. Please commit or stash your changes before proceeding."
+        )
+      );
+      process.exit(1);
+    }
     const config = await getConfig();
 
     const baseBranchNames = Object.keys(config.baseBranches);
     if (!baseBranchNames.length) {
-      console.log(chalk.red("No base branches declared yet."));
+      console.log(chalk.red("⛔️ No base branches declared yet."));
       return;
     }
 
@@ -535,7 +600,7 @@ program
       console.log(chalk.green(`Checked out branch ${branchToCheckout}`));
     } catch (err) {
       console.log(
-        chalk.red(`Failed to checkout branch ${branchToCheckout}: ${err}`)
+        chalk.red(`‼️ Failed to checkout branch ${branchToCheckout}: ${err}`)
       );
     }
   });
