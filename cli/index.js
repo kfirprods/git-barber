@@ -10,49 +10,113 @@ import simpleGit from "simple-git";
 
 const git = simpleGit();
 
-async function getConfigPath() {
+// Custom prompt wrapper for graceful ctrl+c handling
+const originalPrompt = inquirer.prompt;
+inquirer.prompt = async (...args) => {
+  try {
+    return await originalPrompt(...args);
+  } catch (error) {
+    if (error && error.message && error.message.includes("force closed")) {
+      console.log("💈 no problem, see you soon!");
+      process.exit(0);
+    }
+    throw error;
+  }
+};
+
+async function getSharedConfigPath() {
   let repoRoot;
   try {
     repoRoot = await git.revparse(["--show-toplevel"]);
     repoRoot = repoRoot.trim();
   } catch (err) {
-    repoRoot = null;
-  }
-  if (repoRoot) {
-    const configDir = path.join(repoRoot, ".git-barber");
-    return { configDir, configPath: path.join(configDir, "config.json") };
-  } else {
-    const configDir = path.join(
-      os.homedir(),
-      process.platform === "win32"
-        ? "AppData/Roaming/git-barber"
-        : ".config/git-barber"
+    console.error(
+      "Error: Unable to determine repository root. Please run inside a git repository."
     );
-    return { configDir, configPath: path.join(configDir, "config.json") };
+    process.exit(1);
+  }
+  return {
+    teamConfigPath: path.join(repoRoot, ".git-barber", "team-config.json"),
+  };
+}
+
+async function getPersonalConfigPath() {
+  let repoRoot;
+  try {
+    repoRoot = await git.revparse(["--show-toplevel"]);
+    repoRoot = repoRoot.trim();
+  } catch (err) {
+    console.error(
+      "Error: Unable to determine repository root. Please run inside a git repository."
+    );
+    process.exit(1);
+  }
+  return {
+    personalConfigPath: path.join(
+      repoRoot,
+      ".git-barber",
+      "my-basebranches.json"
+    ),
+  };
+}
+
+async function ensureSharedConfig() {
+  const { teamConfigPath } = await getSharedConfigPath();
+  // Ensure the directory exists
+  await fs.ensureDir(path.dirname(teamConfigPath));
+  if (!(await fs.pathExists(teamConfigPath))) {
+    await fs.writeJson(
+      teamConfigPath,
+      {
+        ignorePatterns: [
+          "package.json",
+          "package-lock.json",
+          "*.svg",
+          "*.png",
+          "*.jpg",
+          "*.mp4",
+        ],
+        largeDiffThreshold: 600,
+      },
+      { spaces: 2 }
+    );
   }
 }
 
-async function ensureConfig() {
-  const { configDir, configPath } = await getConfigPath();
-  if (!(await fs.pathExists(configPath))) {
-    await fs.ensureDir(configDir);
-    await fs.writeJson(configPath, {
-      baseBranches: {},
-      branchTree: {},
-      ancestors: {},
-    });
+async function ensurePersonalConfig() {
+  const { personalConfigPath } = await getPersonalConfigPath();
+  if (!(await fs.pathExists(personalConfigPath))) {
+    await fs.writeJson(
+      personalConfigPath,
+      {
+        baseBranches: {},
+        branchTree: {},
+        ancestors: {},
+      },
+      { spaces: 2 }
+    );
   }
 }
 
-async function getConfig() {
-  await ensureConfig();
-  const { configPath } = await getConfigPath();
-  return fs.readJson(configPath);
+async function getSharedConfig() {
+  await ensureSharedConfig();
+  const { teamConfigPath } = await getSharedConfigPath();
+  return fs.readJson(teamConfigPath);
 }
 
-async function saveConfig(config) {
-  const { configPath } = await getConfigPath();
-  await fs.writeJson(configPath, config, { spaces: 2 });
+async function getPersonalConfig() {
+  const { personalConfigPath } = await getPersonalConfigPath();
+  return fs.readJson(personalConfigPath);
+}
+
+async function saveSharedConfig(config) {
+  const { teamConfigPath } = await getSharedConfigPath();
+  await fs.writeJson(teamConfigPath, config, { spaces: 2 });
+}
+
+async function savePersonalConfig(config) {
+  const { personalConfigPath } = await getPersonalConfigPath();
+  await fs.writeJson(personalConfigPath, config, { spaces: 2 });
 }
 
 function buildBranchChoices(tree, branch, depth = 0, choices = []) {
@@ -92,15 +156,40 @@ async function syncBranches(branchTree, branch) {
   }
 }
 
-function printTree(tree, baseBranches, currentBranch, deletedBranches = []) {
+function printTree(
+  tree,
+  baseBranches,
+  currentBranch,
+  diffMapping = {},
+  threshold,
+  deletedBranches = []
+) {
   function printBranch(branch, depth) {
     const indent = "  ".repeat(depth);
     let branchName = branch;
     if (deletedBranches.includes(branch)) {
       branchName = chalk.strikethrough(chalk.red(branch));
     } else if (branch === currentBranch) {
-      branchName = chalk.bgBlue(branch) + "\t" + chalk.white("👈 you're here");
+      // highlight current branch, then later we add "you're here"
+      branchName = chalk.bgBlue(branch);
     }
+
+    // add (+300 -100) diff
+    if (!baseBranches[branch] && diffMapping[branch]) {
+      const diff = diffMapping[branch];
+      if (diff) {
+        const warning = diff.addedLines > threshold ? "⚠️ " : "";
+        const diffStr = `(${warning}${chalk.green(
+          "+" + diff.addedLines
+        )} ${chalk.red("-" + diff.removedLines)})`;
+        branchName = branchName + " " + diffStr;
+      }
+    }
+
+    if (branch === currentBranch) {
+      branchName = branchName + "\t" + chalk.white("👈 you're here");
+    }
+
     console.log(indent + branchName);
     if (tree[branch]) {
       for (const child of tree[branch]) {
@@ -113,18 +202,75 @@ function printTree(tree, baseBranches, currentBranch, deletedBranches = []) {
   }
 }
 
+// Insert helper functions for computing diff summaries
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function shouldIgnoreFile(fileName, ignorePatterns) {
+  return ignorePatterns.some((pattern) => {
+    if (pattern.includes("*")) {
+      const regex = new RegExp(
+        "^" + pattern.split("*").map(escapeRegExp).join(".*") + "$"
+      );
+      return regex.test(fileName);
+    } else {
+      return fileName === pattern;
+    }
+  });
+}
+
+async function computeDiffSummary(parent, child, ignorePatterns) {
+  try {
+    // Get the diff summary between parent and child
+    const summary = await git.diffSummary([parent, child]);
+    let addedLines = 0;
+    let removedLines = 0;
+    summary.files.forEach((file) => {
+      if (!shouldIgnoreFile(file.file, ignorePatterns)) {
+        addedLines += file.insertions;
+        removedLines += file.deletions;
+      }
+    });
+    if (addedLines === 0 && removedLines === 0) return null;
+    return { addedLines, removedLines };
+  } catch (err) {
+    return null;
+  }
+}
+
+async function getDiffMapping(tree, parent, ignorePatterns, mapping = {}) {
+  if (!tree[parent]) return mapping;
+  for (const child of tree[parent]) {
+    const diff = await computeDiffSummary(parent, child, ignorePatterns);
+    mapping[child] = diff;
+    await getDiffMapping(tree, child, ignorePatterns, mapping);
+  }
+  return mapping;
+}
+
+async function calculateDiffMapping(tree, baseBranches, ignorePatterns) {
+  let mapping = {};
+  for (const base in baseBranches) {
+    if (tree[base]) {
+      mapping = await getDiffMapping(tree, base, ignorePatterns, mapping);
+    }
+  }
+  return mapping;
+}
+
 const program = new Command();
 
 program
   .name("git-barber")
-  .description(chalk.blueBright("CLI tool to neatly manage base branches"))
+  .description(chalk.blueBright("💈 CLI tool to neatly manage base branches"))
   .version("1.0.0");
 
 program
   .command("declare-base <branch>")
   .description("Declare a new base branch (creates if not exists)")
   .action(async (branch) => {
-    const config = await getConfig();
+    const config = await getPersonalConfig();
 
     if (!config.baseBranches[branch]) {
       const currentBranch = (await git.branch()).current;
@@ -141,7 +287,7 @@ program
       config.baseBranches[branch] = true;
       config.branchTree[branch] = [];
       config.ancestors[branch] = ancestor;
-      await saveConfig(config);
+      await savePersonalConfig(config);
 
       console.log(
         chalk.green(
@@ -174,7 +320,7 @@ program
       );
       process.exit(1);
     }
-    const config = await getConfig();
+    const config = await getPersonalConfig();
 
     const baseBranchNames = Object.keys(config.baseBranches);
     if (!baseBranchNames.length) {
@@ -255,7 +401,7 @@ program
       config.branchTree[answers.parentBranch] = [];
     if (!config.branchTree[answers.parentBranch].includes(branchName))
       config.branchTree[answers.parentBranch].push(branchName);
-    await saveConfig(config);
+    await savePersonalConfig(config);
 
     if (!providedBranch) {
       const { pushBranch } = await inquirer.prompt([
@@ -290,7 +436,7 @@ program
       );
       process.exit(1);
     }
-    const config = await getConfig();
+    const config = await getPersonalConfig();
 
     const choices = [];
     for (const base in config.baseBranches) {
@@ -301,6 +447,8 @@ program
       buildBranchChoices(config.branchTree, base, 1, choices);
     }
 
+    // disable last choice - can't start syncing from last branch
+    choices[choices.length - 1].disabled = true;
     const { startBranch } = await inquirer.prompt([
       {
         type: "list",
@@ -389,22 +537,27 @@ program
   });
 
 program
-  .command("reset-config")
-  .description("Reset git-barber configuration")
+  .command("reset-bases")
+  .description("Reset your personal git-barber base branches configuration")
   .action(async () => {
     const { confirm } = await inquirer.prompt([
       {
         type: "input",
         name: "confirm",
-        message: "Are you sure you want to delete your git-barber config? y/N",
+        message:
+          "Are you sure you want to reset your git-barber base branches configuration? y/N",
         default: "N",
       },
     ]);
 
     if (confirm.toLowerCase() === "y") {
-      const { configPath } = await getConfigPath();
-      await fs.remove(configPath);
-      console.log(chalk.green("git-barber configuration has been reset."));
+      const { personalConfigPath } = await getPersonalConfigPath();
+      await fs.remove(personalConfigPath);
+      console.log(
+        chalk.green(
+          "Your git-barber base branches configuration has been reset."
+        )
+      );
     } else {
       console.log(chalk.yellow("Reset operation cancelled."));
     }
@@ -412,19 +565,33 @@ program
 
 program
   .command("status")
-  .description("Show current branch tree with current branch highlighted")
+  .description(
+    "Show current branch tree with current branch highlighted and PR diff summaries"
+  )
   .action(async () => {
-    const config = await getConfig();
+    const personalConfig = await getPersonalConfig();
+    const sharedConfig = await getSharedConfig();
     const current = (await git.branch()).current;
     console.log(chalk.blueBright("Current Branch Tree:"));
-    printTree(config.branchTree, config.baseBranches, current);
+    const diffMapping = await calculateDiffMapping(
+      personalConfig.branchTree,
+      personalConfig.baseBranches,
+      sharedConfig.ignorePatterns
+    );
+    printTree(
+      personalConfig.branchTree,
+      personalConfig.baseBranches,
+      current,
+      diffMapping,
+      sharedConfig.largeDiffThreshold
+    );
   });
 
 program
   .command("delete")
   .description("Delete selected branch(es) locally")
   .action(async () => {
-    const config = await getConfig();
+    const config = await getPersonalConfig();
 
     // Build choices from each base branch using buildBranchChoices
     let choices = [];
@@ -532,10 +699,10 @@ program
       delete config.branchTree[branch];
     });
 
-    await saveConfig(config);
+    await savePersonalConfig(config);
 
     console.log(chalk.blueBright("Updated Branch Tree:"));
-    printTree(config.branchTree, config.baseBranches, current);
+    printTree(config.branchTree, config.baseBranches, current, {}, 600);
 
     console.log(
       chalk.green("Deleted branches: " + branchesToDelete.join(", "))
@@ -555,7 +722,7 @@ program
       );
       process.exit(1);
     }
-    const config = await getConfig();
+    const config = await getPersonalConfig();
 
     const baseBranchNames = Object.keys(config.baseBranches);
     if (!baseBranchNames.length) {
@@ -603,6 +770,62 @@ program
         chalk.red(`‼️ Failed to checkout branch ${branchToCheckout}: ${err}`)
       );
     }
+  });
+
+program
+  .command("config")
+  .description(
+    "Edit git-barber configuration values (ignorePatterns, largeDiffThreshold)"
+  )
+  .action(async () => {
+    const { teamConfigPath } = await getSharedConfigPath();
+    console.log(
+      chalk.blueBright(`💈 git-barber configuration (path: ${teamConfigPath})`)
+    );
+
+    const config = await getSharedConfig();
+    const { option } = await inquirer.prompt([
+      {
+        type: "list",
+        name: "option",
+        message: "Which configuration option do you want to edit?",
+        choices: [
+          { name: "Diff Ignore Patterns", value: "ignorePatterns" },
+          { name: "Large Diff Threshold", value: "largeDiffThreshold" },
+        ],
+      },
+    ]);
+
+    if (option === "ignorePatterns") {
+      const { patterns } = await inquirer.prompt([
+        {
+          type: "input",
+          name: "patterns",
+          message: "Enter new ignore patterns as comma-separated values:",
+          default: config.ignorePatterns.join(", "),
+        },
+      ]);
+      config.ignorePatterns = patterns
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      console.log(chalk.green("Ignore patterns replaced successfully!"));
+    } else if (option === "largeDiffThreshold") {
+      const { threshold } = await inquirer.prompt([
+        {
+          type: "input",
+          name: "threshold",
+          message: "Enter new value for large diff threshold:",
+          default: config.largeDiffThreshold.toString(),
+          validate: (input) => {
+            return isNaN(Number(input)) ? "Please enter a numeric value" : true;
+          },
+        },
+      ]);
+      config.largeDiffThreshold = Number(threshold);
+      console.log(chalk.green("Large diff threshold updated!"));
+    }
+    await saveSharedConfig(config);
   });
 
 program.parse();
