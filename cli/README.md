@@ -16,8 +16,8 @@ npm install -g git-barber
 
 ### Declare a Base Branch
 
-Declares a base branch with a chosen ancestor (defaulting to your current branch).
-If the git branch does not exist, it will be created.
+Declares a base branch, e.g. `feature/paymentsBaseBranch`. You may optionally specify the branch name, otherwise the CLI will prompt you to type one.
+If the specified branch does not exist, it will be created, so you can use this both with existing branches and new ones.
 
 ```bash
 git-barber declare-base <branch>
@@ -69,11 +69,15 @@ git-barber branch [branchName]
 
 For example:
 
-// Interactively create a new nested branch
+#### Interactively create a new nested branch (you will be prompted for the input)
+```bash
 git-barber branch
+```
 
-// Create / register existing branch as a child:
+#### Create / register existing branch as a child:
+```bash
 git-barber branch feature/paymentsPaypal
+```
 
 After invoking the command, you'll see a visual tree-like structure for choosing the parent branch:
 
@@ -90,6 +94,26 @@ Synchronizes changes by merging from a selected ancestor branch down through its
 
 ```bash
 git-barber sync
+```
+
+**Example output:**
+```bash
+✔ Select branch to start sync from: 
+dev (ancestor of feature/analyticsDashboardOverview/baseBranch)
+
+✅ Merged dev into feature/analyticsDashboardOverview/baseBranch
+
+✅ Merged feature/analyticsDashboardOverview/baseBranch into feature/analyticsDashboardOverview/topRoomDetailsBox
+
+✅ Merged feature/analyticsDashboardOverview/topRoomDetailsBox into feature/analyticsDashboardOverview/mostVisitedTabs
+
+✅ Merged feature/analyticsDashboardOverview/mostVisitedTabs into feature/analyticsDashboardOverview/crmInsights
+
+✅ Merged feature/analyticsDashboardOverview/crmInsights into feature/analyticsDashboardOverview/crmInsights-2
+
+✅ Merged feature/analyticsDashboardOverview/crmInsights-2 into feature/analyticsDashboardOverview/tooltips
+
+Sync complete!
 ```
 
 Choose your starting branch interactively from an indented tree.
