@@ -1,1 +1,249 @@
-Coming soon...
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Git Barber CLI</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tiny-slider/2.9.3/tiny-slider.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    :root {
+      --bg-color: #020618;
+      --alternative-bg: #0f172b;
+      --text-color: #e0e0e0;
+      --text-secondary: #6e7681;
+      --primary-color: #4e73df;
+      --carousel-text: #a0a0a0;
+      --install-border: #4e73df;
+      --install-box-shadow: rgba(78, 115, 223, 0.3);
+      --button-color: #4e73df;
+      --button-hover: #6f9eff;
+      --docs-link-color: #4e73df;
+      --faq-border: transparent;
+      --faq-title: #f5f5f5;
+      --faq-text: #d0d0d0;
+    }
+
+    .slide img {
+      max-height: 250px;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: "Mona Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    section {
+      margin-bottom: 40px;
+    }
+    .fade-in {
+      opacity: 0;
+      animation: fadeIn 1s ease forwards;
+    }
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    /* Hero Section Style */
+    #heroSection .logo {
+        text-align: center;
+        font-weight: 700;
+        margin: 0.5rem;
+    }
+    #heroSection h1 {
+      font-size: 2.75rem;
+      color: var(--text-color);
+      text-align: center;
+      margin: 0;
+      margin-top: 2rem;
+    }
+
+    #heroSection h5 {
+      font-size: 1.25rem;
+      font-weight: 450;
+      color: var(--text-secondary);
+      text-align: left;
+      margin-top: 1rem;
+      padding: 0 4rem;
+    }
+
+    .docs-link {
+      margin: 1.5rem;
+    }
+
+    /* Carousel Section Placeholder */
+    .carousel-placeholder {
+      background-color: var(--alternative-bg);
+      padding: 50px;
+      border-radius: 8px;
+      text-align: center;
+      color: var(--carousel-text);
+      font-size: 1.2rem;
+    }
+    /* Install Section style */
+    .install-box-container {
+      display: flex;
+      justify-content: center;
+    }
+
+    .install-box {
+      font-family: 'Fira Code', monospace;
+      background-color: var(--alternative-bg);
+      /* border: 2px solid var(--install-border); */
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      box-shadow: 0 4px 8px var(--install-box-shadow);
+      max-width: 350px;
+    }
+    .install-box span {
+      margin-right: 10px;
+    }
+    .install-box button {
+      background: none;
+      border: none;
+      color: var(--button-color);
+      cursor: pointer;
+      font-size: 1.5rem;
+    }
+    .install-box button:hover {
+      color: var(--button-hover);
+    }
+    
+    a {
+      color: var(--docs-link-color);
+      text-decoration: underline;
+      font-size: 1rem;
+    }
+
+    /* FAQ Section styling */
+    #faqSection h2 {
+      text-align: center;
+      color: var(--primary-color);
+    }
+    .faq-item {
+      margin-bottom: 20px;
+      padding: 10px;
+      /* border: 1px solid var(--faq-border); */
+      border-radius: 5px;
+      background-color: var(--alternative-bg);
+    }
+    .faq-item h3 {
+      margin-top: 0;
+      color: var(--faq-title);
+    }
+    .faq-item p {
+      margin: 5px 0 0;
+      color: var(--faq-text);
+    }
+
+    div.tns-item {
+      text-align:center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Hero Section -->
+    <section id="heroSection" class="fade-in" style="animation-delay: 0s;">
+      <h3 class="logo">💈 git-barber</h3>
+      <h1>Say goodbye to oversized PRs 👋</h1>
+      <h5>Git Barber helps you manage nested branches, so you can split your work into smaller, manageable changes.</h5>
+    </section>
+
+    <!-- Carousel Section -->
+    <section id="carouselSection" class="fade-in" style="animation-delay: 0.3s;">
+      <div class="my-slider">
+        <div class="slide"><img src="https://i.imgur.com/gKXC2So.png" alt="Slide 1"></div>
+        <div class="slide"><img src="https://i.imgur.com/mV3DjsJ.png" alt="Slide 2"></div>
+      </div>
+
+      <span id="slider-autoplay" style="display: none;"></span>
+    </section>
+
+    <!-- Install Section -->
+    <section id="installSection" class="fade-in" style="animation-delay: 0.6s;">
+      <div class="install-box-container">
+        <div class="install-box">
+          <span>npm i -g git-barber</span>
+        </div>
+      </div>
+
+      <div class="docs-link" style="text-align: center;">
+        <a href="https://github.com/kfirprods/git-barber/blob/main/cli/README.md" target="_blank">
+          📄
+          Read the Docs</a>
+      </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="faqSection" class="fade-in" style="animation-delay: 0.9s;">
+      <div class="faq-item">
+        <h3>Base branch - your own temporary dev branch</h3>
+        <p>With Git Barber, declare a base branch for a big feature. Treat this branch as you would treat your repository's main development branch, i.e.:
+          <ul>
+            <li>Only merge reviewed changes to the base branch</li>
+          </ul>
+        </p>
+
+        Using 
+        <pre>git-barber declare-base</pre>
+      </div>
+      <div class="faq-item">
+        <h3>Sub branches - small, manageable changes</h3>
+        <p>
+          A sub branch is pretty much a normal branch. It can be a direct child of the base branch, or can be deeply nested within it.
+          The goal is to create a separate sub branch for each atomic change you make, resulting in many small changes that can be easily reviewed by separate people.
+
+          <pre>git-barber branch</pre>
+        </p>
+      </div>
+      <div class="faq-item">
+        <h3>Stay in sync with the dev branch</h3>
+        <p>
+          One of the biggest pain points of nesting branches is the difficulty of merging changes from the main branch down through the nested branches.
+          Git Barber solves this by providing a <pre>git-barber sync</pre> command, which will merge changes from your branch of choice to all of its nested sub branches.
+        </p>
+      </div>
+      <div class="faq-item">
+        <h3>Get a clear overview of your branches</h3>
+        <p>
+          You can easily view and even checkout any branches that you declared/created using Git Barber with:
+          <pre>git-barber status</pre> and <pre>git-barber checkout</pre>
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tiny-slider/2.9.3/min/tiny-slider.js" crossorigin="anonymous"></script>
+  <script>
+    var slider = tns({
+      container: '.my-slider',
+      items: 1,
+      center: true,
+      slideBy: 'page',
+      autoplay: true,
+      controls: false,
+      nav: false,
+      autoplayTimeout: 3000,
+      speed: 600,
+      autoplayButton: '#slider-autoplay'
+    });
+  </script>
+</body>
+</html>

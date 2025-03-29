@@ -1,4 +1,4 @@
-# 🪒 Git Barber CLI
+# 💈 Git Barber CLI
 
 A neat CLI tool for managing structured, nested Git branches.
 
@@ -16,7 +16,8 @@ npm install -g git-barber
 
 ### Declare a Base Branch
 
-Creates or declares a base branch with a chosen ancestor (defaulting to your current branch):
+Declares a base branch with a chosen ancestor (defaulting to your current branch).
+If the git branch does not exist, it will be created.
 
 ```bash
 git-barber declare-base <branch>
@@ -25,7 +26,34 @@ git-barber declare-base <branch>
 **Example:**
 
 ```bash
-git-barber declare feature/payment
+git-barber declare-base feature/paymentsBaseBranch
+```
+
+### Status - List all branches
+
+Shows a tree-list of all declared branches, including the estimated PR size for each one.
+
+```bash
+git-barber status
+```
+
+**Example output:**
+```
+Current Branch Tree:
+feature/analyticsDashboardOverview/baseBranch
+  feature/analyticsDashboardOverview/topRoomDetailsBox (+162 -155)
+    feature/analyticsDashboardOverview/mostVisitedTabs (+419 -44)
+      feature/analyticsDashboardOverview/crmInsights (+290 -78)
+        feature/analyticsDashboardOverview/crmInsights-2 (+262 -73)	👈 you're here
+          feature/analyticsDashboardOverview/tooltips (+61 -10)
+```
+
+### Checkout one of the branches
+
+Though you can just use normal `git checkout`, this command will show you an interactive tree-list of your branches for a better experience.
+
+```bash
+git-barber checkout
 ```
 
 ### Create Nested Branches
@@ -44,8 +72,8 @@ For example:
 // Interactively create a new nested branch
 git-barber branch
 
-// Create or register branch 'feature/profile-update'
-git-barber branch feature/profile-update
+// Create / register existing branch as a child:
+git-barber branch feature/paymentsPaypal
 
 After invoking the command, you'll see a visual tree-like structure for choosing the parent branch:
 
@@ -66,6 +94,8 @@ git-barber sync
 
 Choose your starting branch interactively from an indented tree.
 
+This addresses one of the biggest pain points of "base branches" - merging an ancestor to its descendants.
+
 ### Delete Branches
 
 Remove selected branch(es) locally. This command presents a multi-select prompt where you can choose the branch(es) to delete.
@@ -77,57 +107,24 @@ Usage:
 git-barber delete
 ```
 
----
+Use this to clear up the clutter of branches that you've already merged.
 
-## Example Workflow
+### Config
 
-1. Declare a base branch:
-
-```bash
-git-barber declare feature/user-profile
-```
-
-2. Create nested branches interactively:
+Shows an interactive configuration menu for the:
+- large diff threshold: how many added lines for a single branch warrant a warning?
+- ignore patterns: patterns of files to exclude from the diff calculation, e.g. images, videos, etc.
 
 ```bash
-git-barber branch
+git-barber config
 ```
 
-3. Sync updates from an ancestor down the hierarchy:
+### Reset Bases
+
+Deletes the configuration file that contains data about your branches. 
+Use this when you need to start fresh.
 
 ```bash
-git-barber sync
+git-barber reset-bases
 ```
-
----
-
-## Configuration
-
-Branch relationships and metadata are stored locally:
-
-- **Windows**: `%APPDATA%\git-barber\config.json`
-- **macOS/Linux**: `~/.config/git-barber/config.json`
-
----
-
-## Handling Merge Conflicts
-
-If conflicts occur during merges, `git-barber` will alert you clearly:
-
-```
-Merge conflicts detected. Please resolve manually in your IDE or git client.
-```
-
----
-
-## Dependencies
-
-- [commander.js](https://github.com/tj/commander.js)
-- [Inquirer.js](https://github.com/SBoudrias/Inquirer.js)
-- [simple-git](https://github.com/steveukx/git-js)
-- [chalk](https://github.com/chalk/chalk)
-
----
-
-Now go manage those branches like a pro, fool! 💪
 

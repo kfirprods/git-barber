@@ -403,24 +403,7 @@ program
       config.branchTree[answers.parentBranch].push(branchName);
     await savePersonalConfig(config);
 
-    if (!providedBranch) {
-      const { pushBranch } = await inquirer.prompt([
-        {
-          type: "input",
-          name: "pushBranch",
-          message: `Would you like to push ${branchName} to origin? (y/N):`,
-          default: "N",
-        },
-      ]);
-      if (pushBranch.toLowerCase() === "y") {
-        try {
-          await git.push("origin", branchName);
-          console.log(chalk.green(`Pushed branch ${branchName} to origin`));
-        } catch (err) {
-          console.log(chalk.red(`Failed to push branch ${branchName}: ${err}`));
-        }
-      }
-    }
+    // TODO: consider printing the branch tree and highlighting the new branch
   });
 
 program
@@ -476,6 +459,12 @@ program
             `No base branch found corresponding to ancestor ${startBranch}`
           );
         }
+
+        // checkout & pull the start branch
+        await git.checkout(startBranch);
+        await git.pull();
+        console.log(chalk.green(`🔄 Pulled ${startBranch} from origin`));
+
         syncRoot = selectedBase;
         await git.checkout(selectedBase);
         await git.merge([
@@ -484,7 +473,9 @@ program
           `Merged ${startBranch} into ${selectedBase}`,
           startBranch,
         ]);
-        console.log(chalk.green(`Merged ${startBranch} into ${selectedBase}`));
+        console.log(
+          chalk.green(`✅ Merged ${startBranch} into ${selectedBase}`)
+        );
         await syncBranches(config.branchTree, selectedBase);
       }
       console.log(chalk.green("Sync complete!"));
