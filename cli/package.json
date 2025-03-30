@@ -1,7 +1,17 @@
 {
-  "name": "cli",
-  "version": "1.0.0",
-  "description": "",
+  "name": "git-barber",
+  "version": "0.0.1",
+  "description": "💈 A neat CLI tool for managing structured, nested Git branches.",
+  "author": "Kfir Eichenblat",
+  "preferGlobal": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kfirprods/git-barber.git"
+  },
+  "homepage": "https://kfirprods.github.io/git-barber/",
+  "bugs": {
+    "url": "https://github.com/kfirprods/git-barber/issues"
+  },
   "main": "index.js",
   "bin": {
     "git-barber": "./index.js"
@@ -11,7 +21,6 @@
     "dev": "node index.js"
   },
   "keywords": [],
-  "author": "",
   "license": "ISC",
   "dependencies": {
     "chalk": "^5.4.1",

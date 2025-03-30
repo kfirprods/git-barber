@@ -1,0 +1,11 @@
+{
+  "ignorePatterns": [
+    "package.json",
+    "package-lock.json",
+    "*.svg",
+    "*.png",
+    "*.jpg",
+    "*.mp4"
+  ],
+  "largeDiffThreshold": 600
+}

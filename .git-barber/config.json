@@ -1,0 +1,11 @@
+{
+  "baseBranches": {
+    "feature/analyticsDashboardOverview/baseBranch": true
+  },
+  "branchTree": {
+    "feature/analyticsDashboardOverview/baseBranch": []
+  },
+  "ancestors": {
+    "feature/analyticsDashboardOverview/baseBranch": "main"
+  }
+}
