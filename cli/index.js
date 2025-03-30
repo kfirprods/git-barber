@@ -4,11 +4,34 @@ import { Command } from "commander";
 import inquirer from "inquirer";
 import chalk from "chalk";
 import fs from "fs-extra";
-import os from "os";
 import path from "path";
 import simpleGit from "simple-git";
+import { execSync } from "child_process";
 
 const git = simpleGit();
+
+// Function to check for updates
+async function checkForUpdates() {
+  try {
+    const currentVersion = JSON.parse(
+      fs.readFileSync(new URL("./package.json", import.meta.url))
+    ).version;
+    const latestVersion = execSync("npm view git-barber version")
+      .toString()
+      .trim();
+
+    if (currentVersion !== latestVersion) {
+      console.log(
+        chalk.blue(
+          `\n💈 A new version of git-barber is available! (${currentVersion} → ${latestVersion})`
+        )
+      );
+      console.log(chalk.blue("Run `npm install -g git-barber` to update.\n"));
+    }
+  } catch (err) {
+    // Silently fail if update check fails
+  }
+}
 
 // Custom prompt wrapper for graceful ctrl+c handling
 const originalPrompt = inquirer.prompt;
@@ -272,6 +295,7 @@ const program = new Command();
 async function initialize() {
   try {
     await ensurePersonalConfig();
+    await checkForUpdates();
   } catch (err) {
     console.error(chalk.red("Failed to initialize personal config:", err));
     process.exit(1);
@@ -287,6 +311,22 @@ initialize()
         chalk.blueBright("💈 CLI tool to neatly manage base branches")
       )
       .version("1.0.0");
+
+    program
+      .command("version")
+      .description("Show detailed version information")
+      .action(async () => {
+        const packageJson = JSON.parse(
+          fs.readFileSync(new URL("./package.json", import.meta.url))
+        );
+        console.log(chalk.blueBright("\n💈 Git Barber"));
+        console.log(chalk.white(`Version: ${packageJson.version}`));
+        console.log(chalk.white(`Repository: ${packageJson.repository.url}`));
+        console.log(chalk.white(`Homepage: ${packageJson.homepage}\n`));
+
+        // Check for updates
+        await checkForUpdates();
+      });
 
     program
       .command("declare-base <branch>")
