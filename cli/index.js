@@ -27,9 +27,13 @@ async function checkForUpdates() {
         )
       );
       console.log(chalk.blue("Run `npm install -g git-barber` to update.\n"));
+      return true;
+    } else {
+      return false;
     }
   } catch (err) {
     // Silently fail if update check fails
+    return false;
   }
 }
 
@@ -321,11 +325,16 @@ initialize()
         );
         console.log(chalk.blueBright("\n💈 Git Barber"));
         console.log(chalk.white(`Version: ${packageJson.version}`));
-        console.log(chalk.white(`Repository: ${packageJson.repository.url}`));
-        console.log(chalk.white(`Homepage: ${packageJson.homepage}\n`));
 
         // Check for updates
-        await checkForUpdates();
+        const isUpdateAvailable = await checkForUpdates();
+        if (!isUpdateAvailable) {
+          console.log(
+            chalk.green(
+              "💈 You're using the latest version of git-barber. Keep up the good work!"
+            )
+          );
+        }
       });
 
     program
