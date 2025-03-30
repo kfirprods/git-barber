@@ -112,6 +112,8 @@ async function ensureSharedConfig() {
 
 async function ensurePersonalConfig() {
   const { personalConfigPath } = await getPersonalConfigPath();
+  // Ensure the directory exists before trying to write the file
+  await fs.ensureDir(path.dirname(personalConfigPath));
   if (!(await fs.pathExists(personalConfigPath))) {
     await fs.writeJson(
       personalConfigPath,
