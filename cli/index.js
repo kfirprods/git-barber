@@ -148,14 +148,22 @@ async function savePersonalConfig(config) {
   await fs.writeJson(personalConfigPath, config, { spaces: 2 });
 }
 
-function buildBranchChoices(tree, branch, depth = 0, choices = []) {
+function buildBranchChoices(
+  tree,
+  branch,
+  depth = 0,
+  isLast = false,
+  choices = []
+) {
   const prefix =
-    depth === 0 ? "" : "  ".repeat(depth - 1) + (depth === 1 ? "└─ " : "├─ ");
+    depth === 0 ? "" : "  ".repeat(depth - 1) + (isLast ? "└─ " : "├─ ");
+
   choices.push({ name: `${prefix}${branch}`, value: branch });
+
   if (tree[branch]) {
     tree[branch].forEach((child, index) => {
-      const isLast = index === tree[branch].length - 1;
-      buildBranchChoices(tree, child, depth + 1, choices);
+      const isLastChild = index === tree[branch].length - 1;
+      buildBranchChoices(tree, child, depth + 1, isLastChild, choices);
     });
   }
   return choices;
