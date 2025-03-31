@@ -1,6 +1,6 @@
 {
   "name": "git-barber",
-  "version": "0.0.4",
+  "version": "0.0.6",
   "description": "💈 A neat CLI tool for managing structured, nested Git branches.",
   "author": "Kfir Eichenblat",
   "preferGlobal": true,
