@@ -519,7 +519,7 @@ initialize()
             name: `${config.ancestors[base]} (ancestor of ${base})`,
             value: config.ancestors[base],
           });
-          buildBranchChoices(config.branchTree, base, 1, choices);
+          buildBranchChoices(config.branchTree, base, 1, true, choices);
         }
 
         // disable last choice - can't start syncing from last branch
@@ -684,7 +684,7 @@ initialize()
         let choices = [];
         for (const base of Object.keys(config.baseBranches)) {
           choices = choices.concat(
-            buildBranchChoices(config.branchTree, base, 0, [])
+            buildBranchChoices(config.branchTree, base, 0, true, [])
           );
         }
 
