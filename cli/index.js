@@ -6,9 +6,11 @@ import chalk from "chalk";
 import fs from "fs-extra";
 import path from "path";
 import simpleGit from "simple-git";
-import { execSync } from "child_process";
+import { exec } from "child_process";
+import { promisify } from "util";
 
 const git = simpleGit();
+const execPromise = promisify(exec);
 
 // Function to check for updates
 async function checkForUpdates() {
@@ -16,9 +18,10 @@ async function checkForUpdates() {
     const currentVersion = JSON.parse(
       fs.readFileSync(new URL("./package.json", import.meta.url))
     ).version;
-    const latestVersion = execSync("npm view git-barber version")
-      .toString()
-      .trim();
+    const { stdout } = await execPromise("npm view git-barber version", {
+      timeout: 600,
+    });
+    const latestVersion = stdout.toString().trim();
 
     if (currentVersion !== latestVersion) {
       console.log(
@@ -174,24 +177,81 @@ async function syncBranches(branchTree, branch) {
   try {
     await git.pull("origin", branch);
   } catch (err) {
-    console.log(
-      chalk.yellow(
-        `[WARNING] Failed to pull branch from remote origin/${branch}: ${err}`
-      )
-    );
+    if (err.toString().includes("no tracking information")) {
+      console.log(
+        chalk.yellow(
+          `[WARNING] No tracking information for branch ${branch}. Skipping pull.`
+        )
+      );
+    } else {
+      console.log(
+        chalk.yellow(
+          `[WARNING] Failed to pull branch from remote origin/${branch}: ${err}`
+        )
+      );
+    }
   }
 
   if (branchTree[branch]) {
     for (const child of branchTree[branch]) {
       await git.checkout(child);
-      await git.merge([
-        "--no-ff",
-        "-m",
-        `Merged ${branch} into ${child}`,
-        branch,
-      ]);
-      console.log(chalk.green(`✅ Merged ${branch} into ${child}`));
-      await syncBranches(branchTree, child);
+      try {
+        await git.merge([
+          "--no-ff",
+          "-m",
+          `Merged ${branch} into ${child}`,
+          branch,
+        ]);
+        console.log(chalk.green(`✅ Merged ${branch} into ${child}`));
+        await syncBranches(branchTree, child);
+      } catch (err) {
+        if (err.message.includes("CONFLICTS")) {
+          console.log(chalk.red(`Merge conflicts detected in branch ${child}`));
+          console.log(
+            chalk.white(
+              "💈 ACTION REQUIRED: Please solve the conflicts and commit your changes."
+            )
+          );
+
+          // Wait for user to hit enter
+          await inquirer.prompt([
+            {
+              type: "input",
+              name: "continue",
+              message:
+                "Press ENTER once you've committed the merge to resume the sync",
+            },
+          ]);
+
+          // Check if there are still uncommitted changes
+          let status = await git.status();
+          while (status.files.length > 0) {
+            console.log(
+              chalk.red(
+                "You still have uncommitted changes. Please solve conflicts and commit first."
+              )
+            );
+
+            // Wait for user to hit enter again
+            await inquirer.prompt([
+              {
+                type: "input",
+                name: "continue",
+                message:
+                  "Press ENTER once you've committed the merge to resume the sync",
+              },
+            ]);
+
+            status = await git.status();
+          }
+
+          // Continue with the sync
+          console.log(chalk.green("Continuing sync..."));
+          await syncBranches(branchTree, child);
+        } else {
+          throw err;
+        }
+      }
     }
   }
 }
@@ -511,6 +571,7 @@ initialize()
           );
           process.exit(1);
         }
+        const currentBranch = (await git.branch()).current;
         const config = await getPersonalConfig();
 
         const choices = [];
@@ -554,8 +615,16 @@ initialize()
 
             // checkout & pull the start branch
             await git.checkout(startBranch);
-            await git.pull();
-            console.log(chalk.green(`🔄 Pulled ${startBranch} from origin`));
+            try {
+              await git.pull();
+              console.log(chalk.green(`🔄 Pulled ${startBranch} from origin`));
+            } catch (err) {
+              console.log(
+                chalk.yellow(
+                  `[WARNING] Failed to pull branch from remote origin/${startBranch}: ${err}`
+                )
+              );
+            }
 
             syncRoot = selectedBase;
             await git.checkout(selectedBase);
@@ -571,6 +640,14 @@ initialize()
             await syncBranches(config.branchTree, selectedBase);
           }
           console.log(chalk.green("Sync complete!"));
+
+          // re-checkout the current branch
+          await git.checkout(currentBranch);
+          console.log(
+            chalk.green(
+              `🔄 Returned to your checked out branch: ${currentBranch}`
+            )
+          );
 
           // Prompt to push all synced branches
           const { pushAll } = await inquirer.prompt([
