@@ -16,6 +16,7 @@ import { createStatusCommand } from "./commands/status.js";
 import { createDeleteCommand } from "./commands/delete.js";
 import { createCheckoutCommand } from "./commands/checkout.js";
 import { createConfigCommand } from "./commands/config.js";
+import { createTutorialCommand } from "./commands/tutorial.js";
 
 // Custom prompt wrapper for graceful ctrl+c handling
 const originalPrompt = inquirer.prompt;
@@ -64,6 +65,7 @@ initialize()
     createDeleteCommand(program);
     createCheckoutCommand(program);
     createConfigCommand(program);
+    createTutorialCommand(program);
 
     program.parse();
   })
