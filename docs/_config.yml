@@ -1,3 +1,22 @@
 theme: jekyll-theme-minimal
-title: Octocat's homepage
-description: Bookmark this to keep an eye on my project updates!
+title: Git Barber CLI
+description: Say goodbye to oversized PRs 👋 Git Barber helps you manage nested branches, so you can split your work into smaller, manageable changes.
+url: "https://kfirprods.github.io"
+baseurl: "/git-barber"
+
+plugins:
+  - jekyll-seo-tag
+
+# SEO settings
+author: kfirprods
+lang: en_US
+
+# Social media (optional)
+github_username: kfirprods
+
+# Additional SEO metadata
+logo: "/git-barber/assets/logo.png" # Add if you have a logo
+social:
+  name: Git Barber
+  links:
+    - https://github.com/kfirprods/git-barber
